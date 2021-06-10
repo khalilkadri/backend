@@ -24,27 +24,37 @@ class CategorieController {
    * @param {View} ctx.view
    */
   async index ({ request, response, view }) {
+    const  type = request.input('type') 
     let list=[]
-    const categories=await Database.select('nom','id').from('cotegories').orderBy('nom')
+    const show=false
+    const add=false
+    const categories=await Database.select('nom','id','type').from('cotegories').where('type',type).orderBy('nom')
     const subs=await Database.select('id','nom','cat_id').from('subcategories').orderBy('cat_id')
+    const cid=await Database.from('cotegories').getMax('id')
+    const sid=await Database.from('subcategories').getMax('id')
+    const ids={cid,sid}
     for(let i of categories)
     {
-      let categories,id,subcategories=[], item={categories,id,subcategories}
-      item.categories=i.nom
+      let nom,id,type,subcategories=[], item={nom,id,type,show,add,subcategories}
+      item.nom=i.nom
       item.id=i.id
+      item.type=i.type
+      item.show=false
+      item.add=false
       for(let j of subs){
+        let objsub={
+          cat_id:j.cat_id,
+          id:j.id,
+          nom:j.nom,
+          show:false
+        }
         if(i.id===j.cat_id)
-        item.subcategories.push(j)
+        item.subcategories.push(objsub)
       }
       list.push(item)
     }
-    
-
-
-    
-    
-   
-    return list
+  
+    return {list,ids}
   }
 
   /**
@@ -69,7 +79,7 @@ class CategorieController {
    */
   async store ({ request, response,auth }) {
     const categorie=await Category.create({
-      user_id:auth.user.id,
+      user_id:request.input('user_id'),
       nom:request.input('nom')
     })
     return categorie
@@ -109,6 +119,13 @@ class CategorieController {
    * @param {Response} ctx.response
    */
   async update ({ params, request, response }) {
+    const data=request.only(['nom']);
+    const cat=await Category.find(params.id);
+    cat.merge(data);
+    await cat.save();
+    return cat;
+    
+    
   }
 
   /**

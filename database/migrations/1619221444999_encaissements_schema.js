@@ -15,6 +15,7 @@ class EncaissementSchema extends Schema {
       table.date('facturation')
       table.date('reglement')
       table.string('categorie')
+      table.string('subcategorie')
       table.string('memo')
       table.timestamps()
 

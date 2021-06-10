@@ -16,12 +16,20 @@
 /** @type {typeof import('@adonisjs/framework/src/Route/Manager')} */
 const Route = use('Route')
 
-Route.resource('/posts','PostController').apiOnly()
 Route.resource('/login','LoginController').apiOnly()
 Route.get('/user','LoginController.getuser')
 Route.group(()=>{
-Route.resource('/encaisse','EncaissementController').apiOnly()
-Route.resource('/cat','CategorieController').apiOnly()
-Route.resource('/subcat','SubcategorieController').apiOnly()
+
 }).middleware(['auth'])
 Route.resource('/decaisse',"DecaissementController").apiOnly()
+Route.get('/decaisses','DecaissementController.decaisses')
+Route.resource('/cat','CategorieController').apiOnly()
+Route.resource('/subcat','SubcategorieController').apiOnly()
+Route.get('/enc-month','EncaissementController.sum_months')
+Route.get('/enc-sub','EncaissementController.sum_subcategories')
+Route.get('/encaisses','EncaissementController.encaisses')
+Route.resource('/encaisse','EncaissementController').apiOnly()
+Route.resource('/objectif','ObjectifController').apiOnly()
+Route.get('/dec-month','DecaissementController.sum_months')
+Route.get('/tresory','EncaissementController.tresory')
+

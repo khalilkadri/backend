@@ -47,7 +47,7 @@ class CategorieController {
    */
   async store ({ request, response,auth }) {
     const Subcategorie=await Subcategory.create({
-      user_id:auth.user.id,
+      user_id:request.input('user_id'),
       cat_id:request.input('cat_id'),
       nom:request.input('nom')
     })
@@ -88,6 +88,11 @@ class CategorieController {
    * @param {Response} ctx.response
    */
   async update ({ params, request, response }) {
+    const data=request.only(['nom']);
+    const cat=await Subcategory.find(params.id);
+    cat.merge(data);
+    await cat.save();
+    return cat;
   }
 
   /**
