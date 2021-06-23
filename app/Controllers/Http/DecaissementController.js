@@ -20,12 +20,7 @@ class DecaissementController {
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async index ({ request, response, view }) {
-    const payes = await Database.from('decaissements').where('type','payee').groupBy('facturation')
-    const engages = await Database.from('decaissements').where('type','engagee').groupBy('facturation')
-
-    return  {payes,engages}
-  }
+ 
 
   /**
    * Render a form to be used for creating a new decaissement.
@@ -47,19 +42,24 @@ class DecaissementController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-   async decaisses({request,response,params}){
+   async decaisses({request,response,params,auth}){
     const  month = request.input('month') 
     let start= month.concat('-01')
-    let end= month.concat('-31')
+    let end= month.concat('-30')
     let categorie=request.input('categorie')
     let subcategorie=request.input('subcategorie')
-    const data = await Database.select('*').from('decaissements').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('categorie',categorie).where('subcategorie',subcategorie).where('type','payee')
-    return data
+    if(subcategorie=='')
+    {const data = await Database.select('*').from('decaissements').where('user_id',auth.user.id).orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('categorie',categorie).whereNull('subcategorie').where('type','payee')
+    return data}
+    else{
+      const data1 = await Database.select('*').from('decaissements').where('user_id',auth.user.id).orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('categorie',categorie).where('subcategorie',subcategorie).where('type','payee')
+    return data1
+    }
 
   }
    async store ({ request, response,auth }) {
     const decaisse = await Decaisse.create({
-      user_id:request.input('user_id'),
+      user_id:auth.user.id,
       intitule: request.input('intitule'),
       montant:request.input('montant'),
       tva:request.input('tva'),
@@ -293,12 +293,12 @@ class DecaissementController {
   
   }
   
-    async sum_months({request,response,params}){
+    async sum_months({request,response,params,auth}){
       //const encaisses=await Database.select('categorie','montant','facturation').from('encaissements').orderBy('categorie').orderBy('facturation')
       const  year = request.input('year') 
        let start= year.concat('-01-01')
        let end= year.concat('-12-31')
-       const data = await Database.select('categorie','subcategorie','montant','facturation').from('decaissements').orderBy('categorie').orderBy('subcategorie').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
+       const data = await Database.select('categorie','subcategorie','montant','facturation').from('decaissements').where('user_id',auth.user.id).orderBy('categorie').orderBy('subcategorie').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
     
        let list=[]
        for(let i of data)
@@ -501,7 +501,7 @@ class DecaissementController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-   async update ({ params, request, response }) {
+   async update ({ params, request, response,auth }) {
     const data=request.only(['intitule','type','montant','tva','facturation','reglement','categorie','subcategorie','memo']);
     const decaisse=await Decaisse.find(params.id);
     decaisse.merge(data);
@@ -520,7 +520,7 @@ class DecaissementController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async destroy ({ params, request, response }) {
+  async destroy ({ params, request, response,auth }) {
     const decaisse=await Decaisse.find(params.id);
     await decaisse.delete();
   }

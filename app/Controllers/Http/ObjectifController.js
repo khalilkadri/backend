@@ -238,10 +238,23 @@ class ObjectifController {
     return sub
   
   }
-   async index({request,response,params}){
+  async fetch_obj({request,response,params,auth}){
+    let year=request.input('year')
+    let month=request.input('month')
+    let cat=request.input('cat')
+    let subcategorie=request.input('subcategorie')
+    if(subcategorie=='')
+{    let obj=await Database.select('*').from('objectifs').where('year',year).where('month',month).where('categorie',cat).whereNull('subcategorie')
+    return obj}
+    else {    let obj=await Database.select('*').from('objectifs').where('year',year).where('month',month).where('categorie',cat).where('subcategorie',subcategorie)
+    return obj
+  }
+
+  }
+   async index({request,response,params,auth}){
     //const encaisses=await Database.select('categorie','montant','facturation').from('encaissements').orderBy('categorie').orderBy('facturation')
     const  year = request.input('year') 
-     const data = await Database.select('*').from('objectifs').orderBy('categorie').orderBy('subcategorie').orderBy('month').where('year',year)
+     const data = await Database.select('*').from('objectifs').where('user_id',auth.user.id).orderBy('categorie').orderBy('subcategorie').orderBy('month').where('year',year)
   
      let list=[]
      for(let i of data)
@@ -437,7 +450,7 @@ class ObjectifController {
    */
   async store ({ request, response,auth }) {
     const objectif=await Objectif.create({
-      user_id:request.input('user_id'),
+      user_id:auth.user.id,
       montant:request.input('montant'),
       categorie:request.input('categorie'),
       subcategorie:request.input('subcategorie'),
@@ -480,7 +493,12 @@ class ObjectifController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async update ({ params, request, response }) {
+  async update ({ params, request, response ,auth}) {
+    const data=request.only(['type','montant','year','month','categorie','subcategorie']);
+    const objectif=await Objectif.find(params.id);
+    objectif.merge(data);
+    await objectif.save();
+    return objectif;
   }
 
   /**
@@ -491,7 +509,9 @@ class ObjectifController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async destroy ({ params, request, response }) {
+  async destroy ({ params, request, response,auth }) {
+    const objectif=await Objectif.find(params.id)
+    objectif.delete();
   }
 }
 

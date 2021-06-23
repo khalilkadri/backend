@@ -3,65 +3,62 @@
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
 /** @typedef {import('@adonisjs/framework/src/View')} View */
+const Admin=use('App/Models/Admin')
+const Database = use('Database')
+const User=use('App/Models/User')
 
 /**
- * Resourceful controller for interacting with logins
+ * Resourceful controller for interacting with admins
  */
-const User=use('App/Models/User')
-class LoginController {
+class AdminController {
   /**
-   * Show a list of all logins.
-   * GET logins
+   * Show a list of all admins.
+   * GET admins
    *
    * @param {object} ctx
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async getuser ({ request, response, view,auth }) {
-    const user=await auth.getUser()
-    return user
+  async index ({ request, response, view }) {
+    const users=Database.select('*').from('users')
+    return users
   }
-
+  
   /**
-   * Render a form to be used for creating a new login.
-   * GET logins/create
+   * Render a form to be used for creating a new admin.
+   * GET admins/create
    *
    * @param {object} ctx
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async create ({ request, response, view }) {
-    return view.render('login')
-  }
-
-  /**
-   * Create/save a new login.
-   * POST logins
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async signup({request,response,params}){
-    const user = await User.create({
+  async signup ({ request, response, view }) {
+    const user = await Admin.create({
       username: request.input('email'),
       email: request.input('email'),
       password: request.input('password')
     })
-    return user
-  }
-  async store ({ request, auth, session, response }) {
-    const { email, password } = request.all()
-    let token = await auth.attempt(email, password)
-    let user = await User.query().where('email', email).fetch()
-    return {token,user}
   }
 
   /**
-   * Display a single login.
-   * GET logins/:id
+   * Create/save a new admin.
+   * POST admins
+   *
+   * @param {object} ctx
+   * @param {Request} ctx.request
+   * @param {Response} ctx.response
+   */
+   async store ({ request,auth, session, response }) {
+    const { email, password } = request.all()
+    let token = await auth.attempt(email, password)
+    let admin = await Admin.query().where('email', email).fetch()
+    return {token,admin}
+  }
+  /**
+   * Display a single admin.
+   * GET admins/:id
    *
    * @param {object} ctx
    * @param {Request} ctx.request
@@ -72,8 +69,8 @@ class LoginController {
   }
 
   /**
-   * Render a form to update an existing login.
-   * GET logins/:id/edit
+   * Render a form to update an existing admin.
+   * GET admins/:id/edit
    *
    * @param {object} ctx
    * @param {Request} ctx.request
@@ -84,8 +81,8 @@ class LoginController {
   }
 
   /**
-   * Update login details.
-   * PUT or PATCH logins/:id
+   * Update admin details.
+   * PUT or PATCH admins/:id
    *
    * @param {object} ctx
    * @param {Request} ctx.request
@@ -95,18 +92,17 @@ class LoginController {
   }
 
   /**
-   * Delete a login with id.
-   * DELETE logins/:id
+   * Delete a admin with id.
+   * DELETE admins/:id
    *
    * @param {object} ctx
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async destroy ({ params, auth, request, response }) {
-    await auth.logout()
-
-    return response.route('login.store')
+  async destroy ({ params, request, response,auth }) {
+    const user=await User.find(params.id)
+    user.delete();
   }
 }
 
-module.exports = LoginController
+module.exports = AdminController

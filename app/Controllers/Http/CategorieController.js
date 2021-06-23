@@ -23,17 +23,18 @@ class CategorieController {
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async index ({ request, response, view }) {
+  async index ({ request, response, view,auth }) {
     const  type = request.input('type') 
     let list=[]
     const show=false
     const add=false
-    const categories=await Database.select('nom','id','type').from('cotegories').where('type',type).orderBy('nom')
+    const categories=await Database.select('nom','id','type').from('cotegories').where('user_id',auth.user.id).where('type',type).orderBy('nom')
     const subs=await Database.select('id','nom','cat_id').from('subcategories').orderBy('cat_id')
     const cid=await Database.from('cotegories').getMax('id')
     const sid=await Database.from('subcategories').getMax('id')
     const ids={cid,sid}
-    for(let i of categories)
+    if(categories.length!=0)
+    {for(let i of categories)
     {
       let nom,id,type,subcategories=[], item={nom,id,type,show,add,subcategories}
       item.nom=i.nom
@@ -53,8 +54,15 @@ class CategorieController {
       }
       list.push(item)
     }
-  
-    return {list,ids}
+  let [first]=list
+    return {list,ids,first}}
+    else {
+      let first="vide"
+      let cid=0
+      let sid=0
+      let ids={cid,sid}
+      let list=[{nom:"vide",subcategorie:[]}]
+      return {list,ids,first}}
   }
 
   /**
@@ -79,8 +87,9 @@ class CategorieController {
    */
   async store ({ request, response,auth }) {
     const categorie=await Category.create({
-      user_id:request.input('user_id'),
-      nom:request.input('nom')
+      user_id:auth.user.id,
+      nom:request.input('nom'),
+      type:request.input('type')
     })
     return categorie
 
@@ -118,7 +127,7 @@ class CategorieController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async update ({ params, request, response }) {
+  async update ({ params, request, response ,auth}) {
     const data=request.only(['nom']);
     const cat=await Category.find(params.id);
     cat.merge(data);
@@ -136,7 +145,7 @@ class CategorieController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async destroy ({ params, request, response }) {
+  async destroy ({ params, request, response,auth }) {
     const categorie=await Category.find(params.id)
     categorie.delete();
   }

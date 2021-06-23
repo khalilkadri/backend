@@ -207,23 +207,23 @@ previsions.push(el);
 return previsions
     
   }
-  async index({request,response,params}){
+  async index({request,response,params,auth}){
      const  year = request.input('year') 
      let start= year.concat('-01-01')
      let end= year.concat('-12-31')
-    let encaisses_payes = await Database.select('id','montant','facturation').from('encaissements').orderBy('facturation').whereBetween('facturation',[start,end]).where('type','payee')
-    let encaisses_engages = await Database.select('id','montant','facturation').from('encaissements').orderBy('facturation').whereBetween('facturation',[start,end]).where('type','engagee')
-    let decaisses_payes = await Database.select('id','montant','facturation').from('decaissements').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
-    let decaisses_engages = await Database.select('id','montant','facturation').from('decaissements').orderBy('facturation').whereBetween('facturation',[start,end]).where('type','engagee')
+    let encaisses_payes = await Database.select('id','montant','facturation').from('encaissements').where('user_id',auth.user.id).orderBy('facturation').whereBetween('facturation',[start,end]).where('type','payee')
+    let encaisses_engages = await Database.select('id','montant','facturation').from('encaissements').where('user_id',auth.user.id).orderBy('facturation').whereBetween('facturation',[start,end]).where('type','engagee')
+    let decaisses_payes = await Database.select('id','montant','facturation').from('decaissements').where('user_id',auth.user.id).orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
+    let decaisses_engages = await Database.select('id','montant','facturation').from('decaissements').where('user_id',auth.user.id).orderBy('facturation').whereBetween('facturation',[start,end]).where('type','engagee')
     let encs_payes=this.calcul(encaisses_payes)
     let encs_engages=this.calcul(encaisses_engages)
     let decs_payes=this.calcul(decaisses_payes)
     let decs_engages=this.calcul(decaisses_engages)
     let tresorie_year=parseInt(year)+1
     const fetch_tresorerie=await Database.select('*').from('tresorerie').where('year',year)
-    const fetch_previsions_encs=await Database.select('*').from('objectifs').where('year',year).where('type','encaissement')
+    const fetch_previsions_encs=await Database.select('*').from('objectifs').where('user_id',auth.user.id).where('year',year).where('type','encaissement')
     let previsions_encs=this.calcul_previsions(fetch_previsions_encs)
-    const fetch_previsions_decs=await Database.select('*').from('objectifs').where('year',year).where('type','decaissement')
+    const fetch_previsions_decs=await Database.select('*').from('objectifs').where('user_id',auth.user.id).where('year',year).where('type','decaissement')
     let previsions_decs=this.calcul_previsions(fetch_previsions_decs)
     let tresorie=[]
     if(fetch_tresorerie.length!=0)
@@ -249,9 +249,8 @@ return previsions
       tresorie[i].x+=tresorie[i-1].x
     }
     const last=tresorie[11].x
-
-    const affectStart=await Database.table('tresorerie').where('year',tresorie_year).update('montant_start',last)
-    const affectEnd=await Database.table('tresorerie').where('year',year).update('montant_end',last)
+    const affectEnd=await Database.table('tresorerie').where('year',year).update('montant_end',last).where('user_id',auth.user.id)
+    const affectStart=await Database.table('tresorerie').where('year',tresorie_year).update('montant_start',last).where('user_id',auth.user.id)
     }
     else{
       tresorie=[{date:'0',montant:'0'},{date:'1',montant:'0'},{date:'2',montant:'0'},{date:'3',montant:'0'},
@@ -262,24 +261,33 @@ return previsions
     return({encs_payes,encs_engages,decs_payes,decs_engages,tresorie,previsions_encs,previsions_decs})
 
   }
-   async tresory ({ request, response, params}) {
+  async engages({request,response,auth}){
+const date=new Date()
+const engages=await Database.select('*').from('encaissements').where('user_id',auth.user.id).where('user_id',auth.user.id).where('type','engagee').where('reglement','<',date).orderBy('reglement')
+return engages
+  }
+   async tresory ({ request, response, params,auth}) {
     const  year = request.input('year') 
      let start= year.concat('-01-01')
      let end= year.concat('-12-31')
-     const encaisses = await Database.select('id','montant','facturation').from('encaissements').orderBy('facturation').whereBetween('facturation',[start,end])
-     const decaisses = await Database.select('id','montant','facturation').from('decaissements').orderBy('facturation').where('facturation','>',start).where('facturation','<',end)
-    
-
+     const encaisses = await Database.select('id','montant','facturation').from('encaissements').where('user_id',auth.user.id).orderBy('facturation').whereBetween('facturation',[start,end])
+     const decaisses = await Database.select('id','montant','facturation').from('decaissements').where('user_id',auth.user.id).orderBy('facturation').where('facturation','>',start).where('facturation','<',end)
     
   }
-  async encaisses({request,response,params}){
+  async encaisses({request,response,params,auth}){
     const  month = request.input('month') 
     let start= month.concat('-01')
     let end= month.concat('-31')
     let categorie=request.input('categorie')
     let subcategorie=request.input('subcategorie')
-    const data = await Database.select('*').from('encaissements').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('categorie',categorie).where('subcategorie',subcategorie).where('type','payee')
-    return data
+    if(subcategorie=='')
+    {const data = await Database.select('*').from('encaissements').orderBy('facturation').where('user_id',auth.user.id).where('facturation','>',start).where('facturation','<',end).where('categorie',categorie).whereNull('subcategorie').where('type','payee')
+    return data}
+    else{
+      const data1 = await Database.select('*').from('encaissements').orderBy('facturation').where('user_id',auth.user.id).where('facturation','>',start).where('facturation','<',end).where('categorie',categorie).where('subcategorie',subcategorie).where('type','payee')
+    return data1
+    }
+
 
   }
 
@@ -503,12 +511,12 @@ return previsions
 
 }
 
-  async sum_months({request,response,params}){
+  async sum_months({request,response,params,auth}){
     //const encaisses=await Database.select('categorie','montant','facturation').from('encaissements').orderBy('categorie').orderBy('facturation')
     const  year = request.input('year') 
      let start= year.concat('-01-01')
      let end= year.concat('-12-31')
-     const data = await Database.select('categorie','subcategorie','montant','facturation').from('encaissements').orderBy('categorie').orderBy('subcategorie').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
+     const data = await Database.select('categorie','subcategorie','montant','facturation').from('encaissements').where('user_id',auth.user.id).orderBy('categorie').orderBy('subcategorie').orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
   
      let list=[]
      for(let i of data)
@@ -688,6 +696,59 @@ return previsions
        
      }
   }
+  calcul_pie(data){
+    let list=[]
+    let [first]=data
+    list.push(first)
+    data.shift()
+    for (let i of data)
+    {for(let j of list)
+      {if(i.categorie==j.categorie)
+      {
+        j.montant+=i.montant
+        break
+      }
+      else if(j.categorie==list[list.length-1].categorie){
+        list.push(i)
+        break
+      }}
+    }
+    return list
+  }
+  async chart_pie({request,response,params,auth}){
+    const  year = request.input('year') 
+     let start= year.concat('-01-01')
+     let end= year.concat('-12-31')
+    const encaisse=await Database.select('categorie','montant').from('encaissements').where('user_id',auth.user.id).orderBy('categorie').whereBetween('facturation',[start,end])
+    let enc_pie=[]
+    if(encaisse.length!=0)
+    enc_pie =this.calcul_pie(encaisse)
+    else enc_pie=[]
+        const decaisse=await Database.select('categorie','montant').from('decaissements').where('user_id',auth.user.id).orderBy('categorie').whereBetween('facturation',[start,end])
+    let dec_pie=[]
+    if(decaisse.length!=0)
+   dec_pie =this.calcul_pie(decaisse)
+   else dec_pie=[]
+    let encaisses_payes = await Database.select('id','montant','facturation').from('encaissements').where('user_id',auth.user.id).orderBy('facturation').whereBetween('facturation',[start,end]).where('type','payee')
+    let decaisses_payes = await Database.select('id','montant','facturation').from('decaissements').where('user_id',auth.user.id).orderBy('facturation').where('facturation','>',start).where('facturation','<',end).where('type','payee')
+    const fetch_tresorerie=await Database.select('*').from('tresorerie').where('year',year).where('user_id',auth.user.id)
+    let tresorie=[]
+    if(fetch_tresorerie.length!=0)
+    {
+     const [tresorerie]=fetch_tresorerie 
+    const encaissements=this.calcul(encaisses_payes)
+    const decaissements=this.calcul(decaisses_payes)
+    let m=0
+    for(let i=0;i<encaissements.length;i++)
+    {
+      let x=parseFloat(encaissements[i].montant)-parseFloat(decaissements[i].montant)
+      let data={m,x}
+      tresorie.push(data)
+      m++
+    }}
+    return ({enc_pie,dec_pie,tresorie})
+   
+  }
   /**
    * Render a form to be used for creating a new post.
    * GET posts/create
@@ -710,7 +771,7 @@ return previsions
    */
    async store ({ request, response,auth }) {
     const encaisse = await Encaisse.create({
-      user_id:request.input('user_id'),
+      user_id:auth.user.id,
       intitule: request.input('intitule'),
       montant:request.input('montant'),
       tva:request.input('tva'),
@@ -761,18 +822,15 @@ return previsions
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async update ({ params, request, response }) {
+  async update ({ params, request, response,auth }) {
     const data=request.only(['intitule','type','montant','tva','facturation','reglement','categorie','subcategorie','memo']);
     const encaisse=await Encaisse.find(params.id);
     encaisse.merge(data);
     await encaisse.save();
     return encaisse;
-    
-  
-  
   }
 
-  async destroy ({ params, request, response }) {
+  async destroy ({ params, request, response,auth }) {
     const encaisse=await Encaisse.find(params.id);
 await encaisse.delete();
   }
